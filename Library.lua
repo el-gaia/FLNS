@@ -469,6 +469,11 @@ local Templates = {
     Tabbox = {
         Side = 1,
         Name = nil,
+        IconName = nil,
+        Description = nil,
+        Visible = true,
+        Collapsed = false,
+        DisableCollapsing = false,
         PopOut = true,
         MaxPopOutHeight = nil,
         PopOutWidth = nil,
@@ -11479,16 +11484,6 @@ function Library:CreateWindow(WindowInfo)
                 Option:RefreshPool()
             end
         end
-
-        for _, Tab in Library.Tabs do
-            if Tab.IsKeyTab then
-                continue
-            end
-
-            for _, Tabbox in Tab.Tabboxes do
-                Tabbox:UpdateCorners()
-            end
-        end
     end
 
     function Window:SetAnimations(Animations: { [string]: boolean }?, TabTransitionTime: number?, TabSwipeOffset: number?, TabSwipeFrom: ("left" | "right" | "top" | "bottom" | string)?)
@@ -12042,19 +12037,29 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local TabboxHolder
+            local TabboxTop
+            local TabboxLabel
+            local TabboxDescription
+            local TabboxCollapseArrow
+            local TabboxLine
+            local TabboxBarArea
             local TabboxButtons
 
             --// Subtab bar metrics: 34px button row + 2 * 6px vertical padding \\--
             local SubTabBarHeight = 46
             local SubTabButtonGap = 6
+            local SubTabBarPadding = 6
+
+            --// Groupbox-style header appears when the Tabbox has a Name
+            local HasHeader = Info.Name ~= nil
 
             do
-                --// Standalone rounded bar that holds the subtab buttons (MainColor);
-                --// the subtab content flows below it on the window body.
+                --// GROUPBOX WRAPPER: the subtab bar and every subtab's content
+                --// are wrapped inside this rounded box.
                 TabboxHolder = New("Frame", {
-                    BackgroundColor3 = "MainColor",
+                    BackgroundColor3 = "BackgroundColor",
                     LayoutOrder = 0,
-                    Size = UDim2.new(1, 0, 0, SubTabBarHeight),
+                    Size = UDim2.fromScale(1, 0),
                     Parent = BoxHolder,
                 })
                 table.insert(
@@ -12064,13 +12069,136 @@ function Library:CreateWindow(WindowInfo)
                         Parent = TabboxHolder,
                     })
                 )
-                Library:AddOutline(TabboxHolder)
-
-                TabboxButtons = New("Frame", {
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromScale(1, 1),
+                New("UIListLayout", {
                     Parent = TabboxHolder,
                 })
+                Library:AddOutline(TabboxHolder)
+
+                --// Header (groupbox-style): icon + title + description + collapse chevron
+                TabboxTop = New("Frame", {
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.fromScale(1, 0),
+                    Visible = HasHeader,
+                    Parent = TabboxHolder,
+                })
+                New("UIPadding", {
+                    PaddingBottom = UDim.new(0, 6),
+                    PaddingLeft = UDim.new(0, 6),
+                    PaddingRight = UDim.new(0, 6),
+                    PaddingTop = UDim.new(0, 6),
+                    Parent = TabboxTop,
+                })
+
+                if HasHeader then
+                    local BoxIcon = Library:GetCustomIcon(Info.IconName)
+                    if BoxIcon then
+                        local TabboxHeaderIcon = New("ImageLabel", {
+                            AnchorPoint = Vector2.new(0, 0.5),
+                            ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
+                            Position = UDim2.fromScale(0, 0.5),
+                            Size = UDim2.fromOffset(22, 22),
+                            Parent = TabboxTop,
+                        })
+                        Library:ApplyLucideIcon(TabboxHeaderIcon, BoxIcon)
+                    end
+
+                    local RightInset = if Info.DisableCollapsing ~= true then 22 else 0
+                    local TextsFrame = New("Frame", {
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        BackgroundTransparency = 1,
+                        Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
+                        Size = UDim2.new(1, -RightInset - (BoxIcon and 24 or 0), 0, 0),
+                        Parent = TabboxTop,
+                    })
+                    New("UIListLayout", {
+                        Parent = TextsFrame,
+                    })
+                    New("UIPadding", {
+                        PaddingBottom = UDim.new(0, 3),
+                        PaddingLeft = UDim.new(0, 6),
+                        PaddingRight = UDim.new(0, 6),
+                        PaddingTop = UDim.new(0, 3),
+                        Parent = TextsFrame,
+                    })
+
+                    TabboxLabel = New("TextLabel", {
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        BackgroundTransparency = 1,
+                        Size = UDim2.fromScale(1, 0),
+                        Text = Info.Name,
+                        TextSize = 15,
+                        TextWrapped = true,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Parent = TextsFrame,
+                    })
+                    New("UIPadding", {
+                        PaddingBottom = UDim.new(0, 1),
+                        Parent = TabboxLabel,
+                    })
+
+                    TabboxDescription = New("TextLabel", {
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        BackgroundTransparency = 1,
+                        Size = UDim2.fromScale(1, 0),
+                        Text = Info.Description or "",
+                        TextSize = 14,
+                        TextTransparency = 0.5,
+                        TextWrapped = true,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Visible = (Info.Description ~= nil),
+                        Parent = TextsFrame,
+                    })
+                end
+
+                TabboxCollapseArrow = New("ImageButton", {
+                    Visible = HasHeader and Info.DisableCollapsing ~= true,
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    BackgroundTransparency = 1,
+                    ImageColor3 = "WhiteColor",
+                    Position = UDim2.fromScale(1, 0.5),
+                    Size = UDim2.fromOffset(22, 22),
+                    Parent = TabboxTop,
+                })
+                if ArrowIcon then
+                    Library:ApplyLucideIcon(TabboxCollapseArrow, ArrowIcon, 180)
+                end
+
+                TabboxLine = Library:MakeLine(TabboxHolder, {
+                    LayoutOrder = 1,
+                    Size = UDim2.new(1, 0, 0, 1),
+                })
+
+                --// Padded area that hosts the subtab bar inside the box
+                TabboxBarArea = New("Frame", {
+                    BackgroundTransparency = 1,
+                    LayoutOrder = 2,
+                    Size = UDim2.new(1, 0, 0, SubTabBarHeight + SubTabBarPadding * 2),
+                    Parent = TabboxHolder,
+                })
+                New("UIPadding", {
+                    PaddingBottom = UDim.new(0, SubTabBarPadding),
+                    PaddingLeft = UDim.new(0, SubTabBarPadding),
+                    PaddingRight = UDim.new(0, SubTabBarPadding),
+                    PaddingTop = UDim.new(0, SubTabBarPadding),
+                    Parent = TabboxBarArea,
+                })
+
+                --// Rounded MainColor bar (segmented control) inside the box
+                TabboxButtons = New("Frame", {
+                    BackgroundColor3 = "MainColor",
+                    Size = UDim2.new(1, 0, 0, SubTabBarHeight),
+                    Parent = TabboxBarArea,
+                })
+                table.insert(
+                    Library.Corners,
+                    New("UICorner", {
+                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                        Parent = TabboxButtons,
+                    })
+                )
+                Library:AddOutline(TabboxButtons)
+
                 New("UIListLayout", {
                     FillDirection = Enum.FillDirection.Horizontal,
                     HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -12094,10 +12222,14 @@ function Library:CreateWindow(WindowInfo)
             local Tabbox: any = {
                 Type = "Tabbox",
 
+                Name = Info.Name,
+                Description = Info.Description,
+
                 Connections = {},
                 Destroyed = false,
 
                 Visible = true,
+                Collapsed = false,
                 ActiveTab = nil,
 
                 BoxHolder = BoxHolder,
@@ -12128,9 +12260,72 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
 
+            local ResizeTween
+            local CollapseArrowTween
+
             function Tabbox:Resize()
-                if Tabbox.ActiveTab then
-                    Tabbox.ActiveTab:Resize()
+                if ResizeTween then
+                    StopTween(ResizeTween, true)
+                    ResizeTween = nil
+                end
+
+                local TopSize = if HasHeader then (TabboxTop.AbsoluteSize.Y / Library.DPIScale) else 0
+                local LineSize = if HasHeader then 1 else 0
+                local BarAreaSize = SubTabBarHeight + SubTabBarPadding * 2
+
+                local ContainerSize = 0
+                if Tabbox.ActiveTab and Tabbox.ActiveTab.List then
+                    ContainerSize = (Tabbox.ActiveTab.List.AbsoluteContentSize.Y / Library.DPIScale) + 14
+                    if Tabbox.PoppedOut then
+                        ContainerSize = math.min(ContainerSize, GetPopOutBodyMaxHeight(Tabbox, TopSize + LineSize + BarAreaSize))
+                    end
+
+                    Tabbox.ActiveTab.Container.Size = UDim2.new(1, 0, 0, ContainerSize)
+                end
+
+                local TargetSize = UDim2.new(
+                    1,
+                    0,
+                    0,
+                    if Tabbox.Collapsed then (TopSize + LineSize) else (TopSize + LineSize + BarAreaSize + ContainerSize)
+                )
+
+                TabboxLine.Visible = HasHeader and not Tabbox.Collapsed
+                TabboxBarArea.Visible = not Tabbox.Collapsed
+
+                if Tabbox.Collapsed then
+                    for _, SubTab in Tabbox.Tabs do
+                        if SubTab.Container then
+                            SubTab.Container.Visible = false
+                        end
+                    end
+                elseif Tabbox.ActiveTab and Tabbox.ActiveTab.Container then
+                    Tabbox.ActiveTab.Container.Visible = true
+                end
+
+                if Library.Animations and Library.Animations.Groupbox then
+                    local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                    local Tween = TweenService:Create(TabboxHolder, TweenInfo, { Size = TargetSize })
+                    ResizeTween = Tween
+
+                    local Connection; Connection = Library:GiveSignal(Tween.Completed:Once(function()
+                        if Connection then
+                            Connection:Disconnect()
+                        end
+
+                        if ResizeTween == Tween then
+                            StopTween(ResizeTween, true)
+                            ResizeTween = nil
+                        end
+                    end))
+
+                    Tween:Play()
+                else
+                    TabboxHolder.Size = TargetSize
+                end
+
+                if ParentObj.Type == "Groupbox" then
+                    ParentObj:Resize()
                 end
             end
 
@@ -12203,11 +12398,11 @@ function Library:CreateWindow(WindowInfo)
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     CanvasSize = UDim2.fromScale(0, 0),
-                    LayoutOrder = 1,
+                    LayoutOrder = 2 + TabIndex,
                     ScrollBarThickness = 0,
                     Size = UDim2.new(1, 0, 0, 0),
                     Visible = false,
-                    Parent = BoxHolder,
+                    Parent = TabboxHolder,
                 })
                 local List = New("UIListLayout", {
                     Padding = UDim.new(0, 8),
@@ -12229,6 +12424,7 @@ function Library:CreateWindow(WindowInfo)
 
                     ButtonHolder = Button,
                     Container = Container,
+                    List = List,
                     ButtonCorner = ButtonCorner,
 
                     Tab = Tab,
@@ -12253,7 +12449,7 @@ function Library:CreateWindow(WindowInfo)
                         ButtonIcon.ImageTransparency = 0
                     end
 
-                    Container.Visible = true
+                    Container.Visible = not Tabbox.Collapsed
 
                     Tabbox.ActiveTab = Tab
                     Tab:Resize()
@@ -12281,15 +12477,8 @@ function Library:CreateWindow(WindowInfo)
                         return
                     end
 
-                    local ContentSize = (List.AbsoluteContentSize.Y / Library.DPIScale) + 14
-                    if Tabbox.PoppedOut then
-                        ContentSize = math.min(ContentSize, GetPopOutBodyMaxHeight(Tabbox, SubTabBarHeight + 7))
-                    end
-
-                    Container.Size = UDim2.new(1, 0, 0, ContentSize)
-                    if ParentObj.Type == "Groupbox" then
-                        ParentObj:Resize()
-                    end
+                    --// Sizing is centralised in the groupbox wrapper
+                    Tabbox:Resize()
                 end
 
                 function Tab:Destroy()
@@ -12301,6 +12490,7 @@ function Library:CreateWindow(WindowInfo)
 
                     Tabbox.Tabs[TabStoringIndex] = nil
                     RefreshButtonWidths()
+                    Tabbox:Resize()
 
                     if Tab.Connections then
                         for _, Connection in Tab.Connections do
@@ -12349,18 +12539,22 @@ function Library:CreateWindow(WindowInfo)
                 MaxPopOutHeight = Info.MaxPopOutHeight,
                 PopOutWidth = Info.PopOutWidth,
 
-                Header = TabboxHolder,
+                Header = if HasHeader then TabboxTop else TabboxButtons,
                 Children = function()
-                    local Children: { GuiObject } = { TabboxHolder }
-                    for _, SubTab in Tabbox.Tabs do
-                        if SubTab.Container and SubTab.Container.Parent then
-                            table.insert(Children, SubTab.Container)
-                        end
-                    end
-                    return Children
+                    --// The whole groupbox wrapper (header + bar + every subtab's content) pops out as one
+                    return { TabboxHolder }
                 end,
 
+                Before = function()
+                    if HasHeader then
+                        TabboxCollapseArrow.Visible = false
+                    end
+                end,
                 After = function()
+                    if HasHeader then
+                        TabboxCollapseArrow.Visible = Info.DisableCollapsing ~= true
+                    end
+
                     if Tabbox.ActiveTab then
                         Tabbox.ActiveTab:Resize()
                     end
@@ -12370,12 +12564,66 @@ function Library:CreateWindow(WindowInfo)
                 end,
             })
 
+            function Tabbox:SetCollapsed(Collapsed: boolean)
+                if Info.DisableCollapsing == true or not HasHeader then
+                    return
+                end
+                Tabbox.Collapsed = Collapsed
+
+                if CollapseArrowTween then
+                    StopTween(CollapseArrowTween, true)
+                    CollapseArrowTween = nil
+                end
+
+                local TargetRotation = if Collapsed then 0 else 180
+
+                if Library.Animations and Library.Animations.Groupbox then
+                    local TweenInfo = Library.GroupboxTweenInfo or TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                    local Tween = TweenService:Create(TabboxCollapseArrow, TweenInfo, { Rotation = TargetRotation })
+                    CollapseArrowTween = Tween
+
+                    local Connection; Connection = Library:GiveSignal(Tween.Completed:Connect(function()
+                        if Connection then
+                            Connection:Disconnect()
+                        end
+
+                        if CollapseArrowTween == Tween then
+                            StopTween(CollapseArrowTween, true)
+                            CollapseArrowTween = nil
+                        end
+                    end))
+
+                    Tween:Play()
+                else
+                    TabboxCollapseArrow.Rotation = TargetRotation
+                end
+
+                Tabbox:Resize()
+            end
+
+            function Tabbox:ToggleCollapsed()
+                if Info.DisableCollapsing == true or not HasHeader then
+                    return
+                end
+                Tabbox:SetCollapsed(not Tabbox.Collapsed)
+            end
+
             function Tabbox:Destroy()
                 if Tabbox.PoppedOut then
                     Tabbox:SetPoppedOut(false)
                 end
 
                 Tabbox.Destroyed = true
+
+                if ResizeTween then
+                    StopTween(ResizeTween, true)
+                    ResizeTween = nil
+                end
+
+                if CollapseArrowTween then
+                    StopTween(CollapseArrowTween, true)
+                    CollapseArrowTween = nil
+                end
 
                 if Tabbox.Connections then
                     for _, Connection in Tabbox.Connections do
@@ -12404,10 +12652,44 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
 
+            function Tabbox:SetVisible(Visible: boolean)
+                Tabbox.Visible = Visible
+                BoxHolder.Visible = Visible
+                SyncPopOutVisibility(Tabbox)
+
+                if Visible == true and Library.Searching then
+                    Library:UpdateSearch(Library.SearchText)
+                end
+            end
+
+            function Tabbox:Show()
+                Tabbox:SetVisible(true)
+            end
+
+            function Tabbox:Hide()
+                Tabbox:SetVisible(false)
+            end
+
+            if HasHeader and Info.DisableCollapsing ~= true then
+                TabboxCollapseArrow.MouseButton1Click:Connect(function()
+                    Tabbox:ToggleCollapsed()
+                end)
+            end
+
+            Tabbox:Resize()
+
             if Info.Name then
                 Tab.Tabboxes[Info.Name] = Tabbox
             else
                 table.insert(Tab.Tabboxes, Tabbox)
+            end
+
+            if Info.Visible == false then
+                Tabbox:Hide()
+            end
+
+            if HasHeader and Info.DisableCollapsing ~= true and Info.Collapsed == true then
+                Tabbox:SetCollapsed(true)
             end
 
             return Tabbox
