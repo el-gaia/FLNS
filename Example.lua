@@ -1,8 +1,4 @@
-
--- example script by https://github.com/mstudio45/LinoriaLib/blob/main/Example.lua and modified by deivid
--- You can suggest changes with a pull request or something
-
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
@@ -24,11 +20,24 @@ local Window = Library:CreateWindow({
 	-- Position and Size are also valid options here
 	-- but you do not need to define them unless you are changing them :)
 
-	Title = "mspaint",
+	Title = "Fallens",
 	Footer = "version: example",
 	Icon = 95816097006870,
 	NotifySide = "Right",
 	ShowCustomCursor = true,
+ ShowTagBar = true,   -- tampilkan tag
+ Tier = "Free",   -- tier akun: "Free" / "Premium"
+ Version = "v1.13.0",  -- versi script
+
+ --// Sidebar & Linebar (BARU) \\--
+ TabButtonsStyle = {
+        Indicator = true,            -- linebar di bawah icon saat tab aktif
+        IndicatorWidth = 16,         -- lebar linebar (px)
+        IndicatorHeight = 3,         -- ketebalan linebar (px)
+        HighlightPadding = 7,        -- padding highlight di sekeliling icon (px)
+        HighlightCornerRadius = 8,   -- radius sudut background highlight icon
+    },
+
 })
 
 -- CALLBACK NOTE:
