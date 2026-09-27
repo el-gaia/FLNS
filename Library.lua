@@ -12044,10 +12044,17 @@ function Library:CreateWindow(WindowInfo)
             local TabboxHolder
             local TabboxButtons
 
+            --// Subtab bar metrics: 34px button row + 2 * 6px vertical padding \\--
+            local SubTabBarHeight = 46
+            local SubTabButtonGap = 6
+
             do
+                --// Standalone rounded bar that holds the subtab buttons (MainColor);
+                --// the subtab content flows below it on the window body.
                 TabboxHolder = New("Frame", {
-                    BackgroundColor3 = "BackgroundColor",
-                    Size = UDim2.fromScale(1, 0),
+                    BackgroundColor3 = "MainColor",
+                    LayoutOrder = 0,
+                    Size = UDim2.new(1, 0, 0, SubTabBarHeight),
                     Parent = BoxHolder,
                 })
                 table.insert(
@@ -12061,13 +12068,21 @@ function Library:CreateWindow(WindowInfo)
 
                 TabboxButtons = New("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 34),
+                    Size = UDim2.fromScale(1, 1),
                     Parent = TabboxHolder,
                 })
                 New("UIListLayout", {
                     FillDirection = Enum.FillDirection.Horizontal,
                     HorizontalAlignment = Enum.HorizontalAlignment.Left,
                     VerticalAlignment = Enum.VerticalAlignment.Center,
+                    Padding = UDim.new(0, SubTabButtonGap),
+                    Parent = TabboxButtons,
+                })
+                New("UIPadding", {
+                    PaddingBottom = UDim.new(0, 6),
+                    PaddingLeft = UDim.new(0, 5),
+                    PaddingRight = UDim.new(0, 5),
+                    PaddingTop = UDim.new(0, 6),
                     Parent = TabboxButtons,
                 })
             end
@@ -12092,90 +12107,24 @@ function Library:CreateWindow(WindowInfo)
                 ParentBox = if ParentObj.Type == "Groupbox" then ParentObj else nil,
             }
 
-            --// Subtab Dropdown (header chevron, styled like a groupbox) \--
-            local SubTabMenuWidth = 110
-            local function RefreshSubTabMenuWidth()
-                local Widest = 60
-                for _, SubTab in Tabbox.Tabs do
-                    if SubTab.Name ~= nil and Trim(tostring(SubTab.Name)) ~= "" then
-                        local X = Library:GetTextBounds(tostring(SubTab.Name), Library.Scheme.Font, 14)
-                        Widest = math.max(Widest, X)
-                    end
+            --// Subtab buttons flex-fill the bar equally (segmented control) \\--
+            local function RefreshButtonWidths()
+                local Count = 0
+                for _ in Tabbox.Tabs do
+                    Count += 1
                 end
-                SubTabMenuWidth = math.floor(Widest + 44)
-            end
 
-            local SubTabSpacer = New("Frame", {
-                BackgroundTransparency = 1,
-                Size = UDim2.new(0, 0, 1, 0),
-                LayoutOrder = 998,
-                Parent = TabboxButtons,
-            })
-            New("UIFlexItem", {
-                FlexMode = Enum.UIFlexMode.Grow,
-                Parent = SubTabSpacer,
-            })
-            Library:MakeLine(SubTabSpacer, {
-                AnchorPoint = Vector2.new(0, 1),
-                Position = UDim2.new(0, 0, 1, 1),
-                Size = UDim2.new(1, 0, 0, 1),
-            })
+                if Count <= 0 then
+                    return
+                end
 
-            local SubTabDropdownButton = New("TextButton", {
-                BackgroundTransparency = 1,
-                LayoutOrder = 999,
-                Size = UDim2.new(0, 34, 0, 34),
-                Text = "",
-                Parent = TabboxButtons,
-            })
-            local SubTabDropdownArrow = New("ImageLabel", {
-                AnchorPoint = Vector2.new(0.5, 0.5),
-                BackgroundTransparency = 1,
-                ImageColor3 = "FontColor",
-                ImageTransparency = 0.5,
-                Position = UDim2.fromScale(0.5, 0.5),
-                Size = UDim2.fromOffset(18, 18),
-                Parent = SubTabDropdownButton,
-            })
-            if ArrowIcon then
-                Library:ApplyLucideIcon(SubTabDropdownArrow, ArrowIcon, 180)
-            end
-            Library:MakeLine(SubTabDropdownButton, {
-                AnchorPoint = Vector2.new(0, 1),
-                Position = UDim2.new(0, 0, 1, 1),
-                Size = UDim2.new(1, 0, 0, 1),
-            })
-
-            local SubTabMenu
-            SubTabMenu = Library:AddContextMenu(
-                SubTabDropdownButton,
-                function()
-                    return UDim2.fromOffset(SubTabMenuWidth, 0)
-                end,
-                function()
-                    return {
-                        SubTabDropdownButton.AbsoluteSize.X - SubTabMenuWidth,
-                        SubTabDropdownButton.AbsoluteSize.Y + 1.5,
-                    }
-                end,
-                1,
-                function(Active: boolean)
-                    SubTabDropdownArrow.ImageTransparency = Active and 0 or 0.5
-                    SubTabDropdownArrow.Rotation = Active and 0 or 180
-                end,
-                false,
-                "bottom",
-                "Dropdown"
-            )
-
-            SubTabDropdownButton.MouseButton1Click:Connect(function()
-                RefreshSubTabMenuWidth()
-                SubTabMenu:Toggle()
-            end)
-
-            function Tabbox:UpdateCorners()
-                for _, Tab in Tabbox.Tabs do
-                    Tab:UpdateCorners()
+                --// Equal share of the bar's inner width per button; the offset keeps
+                --// the (Count - 1) layout gaps from overflowing the bar.
+                local Offset = -((Count - 1) * SubTabButtonGap) / Count
+                for _, SubTab in Tabbox.Tabs do
+                    if SubTab.ButtonHolder and SubTab.ButtonHolder.Parent then
+                        SubTab.ButtonHolder.Size = UDim2.new(1 / Count, Offset, 1, 0)
+                    end
                 end
             end
 
@@ -12198,15 +12147,16 @@ function Library:CreateWindow(WindowInfo)
                 local TabStoringIndex = IsNameEmpty and tostring(TabIndex) or Name
 
                 local Button = New("TextButton", {
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    BackgroundColor3 = "MainColor",
-                    BackgroundTransparency = 0,
-                    Size = UDim2.new(0, 0, 0, 34),
+                    BackgroundColor3 = "OutlineColor",
+                    BackgroundTransparency = 1,
+                    LayoutOrder = TabIndex,
+                    Size = UDim2.fromScale(1, 1), --// normalised by RefreshButtonWidths
                     Text = "",
                     Parent = TabboxButtons,
                 })
                 New("UIListLayout", {
                     FillDirection = Enum.FillDirection.Horizontal,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
                     VerticalAlignment = Enum.VerticalAlignment.Center,
                     Padding = UDim.new(0, 6),
                     Parent = Button,
@@ -12217,13 +12167,11 @@ function Library:CreateWindow(WindowInfo)
                     Parent = Button,
                 })
 
+                --// Fully rounded pill, filled (OutlineColor) while active
                 local ButtonCorner = New("UICorner", {
-                    TopLeftRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    TopRightRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    BottomRightRadius = UDim.new(0, 0),
-                    BottomLeftRadius = UDim.new(0, 0),
+                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
                     Parent = Button,
-                }); table.insert(Library.SpecificCorners, ButtonCorner)
+                }); table.insert(Library.Corners, ButtonCorner)
 
                 local ButtonIcon
                 local BoxIcon = Library:GetCustomIcon(IconName)
@@ -12250,22 +12198,16 @@ function Library:CreateWindow(WindowInfo)
                     })
                 end
 
-                local Line = Library:MakeLine(Button, {
-                    AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, 0, 1, 1),
-                    Size = UDim2.new(1, 0, 0, 1),
-                })
-
                 local Container = New("ScrollingFrame", {
                     AutomaticCanvasSize = Enum.AutomaticSize.Y,
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     CanvasSize = UDim2.fromScale(0, 0),
-                    Position = UDim2.fromOffset(0, 35),
+                    LayoutOrder = 1,
                     ScrollBarThickness = 0,
-                    Size = UDim2.new(1, 0, 1, -35),
+                    Size = UDim2.new(1, 0, 0, 0),
                     Visible = false,
-                    Parent = TabboxHolder,
+                    Parent = BoxHolder,
                 })
                 local List = New("UIListLayout", {
                     Padding = UDim.new(0, 8),
@@ -12296,36 +12238,13 @@ function Library:CreateWindow(WindowInfo)
                     DependencyBoxes = {},
                 }
 
-                --// Dropdown menu entry \--
-                local MenuItemText = IsNameEmpty and string.format("Tab %d", TabIndex) or tostring(Name)
-                local MenuItem = New("TextButton", {
-                    BackgroundColor3 = "MainColor",
-                    BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 21),
-                    Text = MenuItemText,
-                    TextSize = 14,
-                    TextTransparency = 0.5,
-                    Parent = SubTabMenu.Menu,
-                })
-
-                MenuItem.MouseButton1Click:Connect(function()
-                    Tab:Show()
-                    SubTabMenu:Close()
-                end)
-
-                RefreshSubTabMenuWidth()
-
                 function Tab:Show()
                     if Tabbox.ActiveTab then
                         Tabbox.ActiveTab:Hide()
                     end
 
-                    Button.BackgroundTransparency = 1
-
-                    if MenuItem then
-                        MenuItem.BackgroundTransparency = 0
-                        MenuItem.TextTransparency = 0
-                    end
+                    --// Active subtab: filled pill + white text
+                    Button.BackgroundTransparency = 0
 
                     if ButtonLabel then
                         ButtonLabel.TextTransparency = 0
@@ -12333,8 +12252,6 @@ function Library:CreateWindow(WindowInfo)
                     if ButtonIcon then
                         ButtonIcon.ImageTransparency = 0
                     end
-
-                    Line.Visible = false
 
                     Container.Visible = true
 
@@ -12344,12 +12261,8 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 function Tab:Hide()
-                    Button.BackgroundTransparency = 0
-
-                    if MenuItem then
-                        MenuItem.BackgroundTransparency = 1
-                        MenuItem.TextTransparency = 0.5
-                    end
+                    --// Inactive subtab: transparent pill + dimmed text
+                    Button.BackgroundTransparency = 1
 
                     if ButtonLabel then
                         ButtonLabel.TextTransparency = 0.5
@@ -12357,7 +12270,7 @@ function Library:CreateWindow(WindowInfo)
                     if ButtonIcon then
                         ButtonIcon.ImageTransparency = 0.5
                     end
-                    Line.Visible = true
+
                     Container.Visible = false
 
                     Tabbox.ActiveTab = nil
@@ -12370,28 +12283,24 @@ function Library:CreateWindow(WindowInfo)
 
                     local ContentSize = (List.AbsoluteContentSize.Y / Library.DPIScale) + 14
                     if Tabbox.PoppedOut then
-                        ContentSize = math.min(ContentSize, GetPopOutBodyMaxHeight(Tabbox, 35))
+                        ContentSize = math.min(ContentSize, GetPopOutBodyMaxHeight(Tabbox, SubTabBarHeight + 7))
                     end
 
-                    TabboxHolder.Size = UDim2.new(1, 0, 0, ContentSize + 35)
+                    Container.Size = UDim2.new(1, 0, 0, ContentSize)
                     if ParentObj.Type == "Groupbox" then
                         ParentObj:Resize()
                     end
                 end
 
-                function Tab:UpdateCorners()
-                    local Radius = WindowInfo.CornerRadius
-
-                    ButtonCorner.TopLeftRadius = UDim.new(0, TabIndex == FirstTab and Radius or 0)
-                    ButtonCorner.TopRightRadius = UDim.new(0, TabIndex == LastTab and Radius or 0)
-                end
-
                 function Tab:Destroy()
                     Tab.Destroyed = true
 
-                    if MenuItem then
-                        MenuItem:Destroy()
+                    if Tabbox.ActiveTab == Tab then
+                        Tabbox.ActiveTab = nil
                     end
+
+                    Tabbox.Tabs[TabStoringIndex] = nil
+                    RefreshButtonWidths()
 
                     if Tab.Connections then
                         for _, Connection in Tab.Connections do
@@ -12430,7 +12339,7 @@ function Library:CreateWindow(WindowInfo)
                 setmetatable(Tab, BaseGroupbox)
 
                 Tabbox.Tabs[TabStoringIndex] = Tab
-                Tabbox:UpdateCorners()
+                RefreshButtonWidths()
 
                 return Tab, TabStoringIndex
             end
@@ -12440,9 +12349,15 @@ function Library:CreateWindow(WindowInfo)
                 MaxPopOutHeight = Info.MaxPopOutHeight,
                 PopOutWidth = Info.PopOutWidth,
 
-                Header = TabboxButtons,
+                Header = TabboxHolder,
                 Children = function()
-                    return { TabboxHolder }
+                    local Children: { GuiObject } = { TabboxHolder }
+                    for _, SubTab in Tabbox.Tabs do
+                        if SubTab.Container and SubTab.Container.Parent then
+                            table.insert(Children, SubTab.Container)
+                        end
+                    end
+                    return Children
                 end,
 
                 After = function()
@@ -12460,10 +12375,6 @@ function Library:CreateWindow(WindowInfo)
                     Tabbox:SetPoppedOut(false)
                 end
 
-                if SubTabMenu then
-                    SubTabMenu:Destroy()
-                end
-
                 Tabbox.Destroyed = true
 
                 if Tabbox.Connections then
@@ -12472,7 +12383,13 @@ function Library:CreateWindow(WindowInfo)
                     end
                 end
 
+                --// Snapshot: Tab:Destroy removes entries from Tabbox.Tabs
+                local TabsSnapshot = {}
                 for _, Tab in Tabbox.Tabs do
+                    table.insert(TabsSnapshot, Tab)
+                end
+
+                for _, Tab in TabsSnapshot do
                     if Tab.Destroy then
                         Tab:Destroy()
                     end
