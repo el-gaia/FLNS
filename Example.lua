@@ -20,11 +20,22 @@ local Window = Library:CreateWindow({
 	-- Position and Size are also valid options here
 	-- but you do not need to define them unless you are changing them :)
 
-	Title = "Fallens",
-	Footer = "version: example",
-	Icon = 95816097006870,
-	NotifySide = "Right",
-	ShowCustomCursor = true,
+Title             = "FALLENS",
+ Footer           = "ObsidianRebuild by Fallens
+ Icon             = 91112706169806,
+ IconSize         = UDim2.fromOffset(40, 40),
+ Font = Enum.Font.Jura,
+ ShowMobileButtons= false,
+ CornerRadius     = 4,
+ NotifySide       = "Right",
+ ShowCustomCursor = true,
+ Size             = UDim2.fromOffset(500, 700),
+ SearchbarSize    = UDim2.fromScale(1, 0.8),
+ GlobalSearch     = false,
+ EnableSidebarResize = true,
+ EnableCompacting = true,
+ SidebarCompacted = true,
+ UnlockMouseWhileOpen = true,
  ShowTagBar = true,   -- tampilkan tag
  Tier = "Free",   -- tier akun: "Free" / "Premium"
  Version = "v1.13.0",  -- versi script
