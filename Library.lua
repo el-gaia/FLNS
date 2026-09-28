@@ -6196,6 +6196,19 @@ do
     end
 end
 
+--// Slider: a recessed track with the value sat inside it, and the label above.
+--// The fill carries a soft sheen, and a slim handle rides its head.
+local SLIDER_BAR_HEIGHT = 18
+local SLIDER_LABEL_HEIGHT = 14
+--// Breathing room between the label and the bar below it
+local SLIDER_LABEL_GAP = 3
+--// The fill gradient multiplies over the accent and runs along the bar, so
+--// these read as factors: shaded at the root, full accent at the head
+local SLIDER_FILL_GRADIENT_FROM = Color3.fromRGB(176, 176, 176)
+local SLIDER_FILL_GRADIENT_TO = Color3.fromRGB(255, 255, 255)
+--// Programmatic value changes glide; dragging stays glued to the cursor
+local SLIDER_FILL_TWEEN = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
 local BaseGroupbox = {}
 do
     local Funcs = {}
@@ -7708,23 +7721,33 @@ do
 
             AllowRightClickInput = Info.AllowRightClickInput,
 
+            Dragging = false,
+            Hovered = false,
+
             Type = "Slider",
         }
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Info.Compact and 15 or 33),
+            Size = UDim2.new(
+                1,
+                0,
+                0,
+                Info.Compact and SLIDER_BAR_HEIGHT or (SLIDER_LABEL_HEIGHT + SLIDER_LABEL_GAP + SLIDER_BAR_HEIGHT)
+            ),
             Visible = Slider.Visible,
             Parent = Container,
         })
 
+        --// Label sits above the bar; the value goes inside it
         local SliderLabel
         if not Info.Compact then
             SliderLabel = New("TextLabel", {
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 14),
+                Size = UDim2.new(1, 0, 0, SLIDER_LABEL_HEIGHT),
                 Text = Slider.Text,
                 TextSize = 14,
+                TextTruncate = Enum.TextTruncate.AtEnd,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = Holder,
             })
@@ -7733,24 +7756,28 @@ do
         local Bar = New("TextButton", {
             Active = not Slider.Disabled,
             AnchorPoint = Vector2.new(0, 1),
-            BackgroundColor3 = "MainColor",
+            --// Sunk below the groupbox surface, so the fill reads as light in a channel
+            BackgroundColor3 = "BackgroundColor",
+            ClipsDescendants = true,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 15),
+            Size = UDim2.new(1, 0, 0, SLIDER_BAR_HEIGHT),
             Text = "",
             Parent = Holder,
         })
 
-        New("UIStroke", {
+        local BarStroke = New("UIStroke", {
             Color = "OutlineColor",
             Parent = Bar,
         })
 
+        --// The value always reads from inside the bar, centred over the fill
         local DisplayLabel = New("TextLabel", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = "",
             TextSize = 14,
-            ZIndex = Bar.ZIndex + 2,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = Bar.ZIndex + 3,
             Parent = Bar,
         })
         New("UIStroke", {
@@ -7764,14 +7791,17 @@ do
         local InputTextBoxStroke
         if Info.AllowRightClickInput then
             InputTextBox = New("TextBox", {
+                AnchorPoint = DisplayLabel.AnchorPoint,
                 BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 1),
+                Position = DisplayLabel.Position,
+                Size = DisplayLabel.Size,
                 Text = "",
                 TextSize = 14,
-                ZIndex = Bar.ZIndex + 3,
+                TextXAlignment = DisplayLabel.TextXAlignment,
+                ZIndex = Bar.ZIndex + 4,
                 Visible = false,
                 ClearTextOnFocus = false,
-                Parent = Bar,
+                Parent = DisplayLabel.Parent,
             })
             InputTextBoxStroke = New("UIStroke", {
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
@@ -7786,6 +7816,13 @@ do
             Size = UDim2.fromScale(0.5, 1),
             ZIndex = Bar.ZIndex + 1,
             Parent = Bar,
+        })
+
+        --// The fill runs from a shaded root to full accent at the head; the
+        --// gradient multiplies over the accent, so nothing rides on the bar
+        New("UIGradient", {
+            Color = ColorSequence.new(SLIDER_FILL_GRADIENT_FROM, SLIDER_FILL_GRADIENT_TO),
+            Parent = Fill,
         })
 
         table.insert(
@@ -7820,6 +7857,12 @@ do
 
             Fill.BackgroundColor3 = Slider.Disabled and Library.Scheme.OutlineColor or Library.Scheme.AccentColor
             Library.Registry[Fill].BackgroundColor3 = Slider.Disabled and "OutlineColor" or "AccentColor"
+
+            --// Hover only warms the track edge; the bar itself stays flat
+            local Warm = Slider.Hovered and not Slider.Disabled
+            BarStroke.Color = Warm and Library.Scheme.AccentColor or Library.Scheme.OutlineColor
+            Library.Registry[BarStroke].Color = Warm and "AccentColor" or "OutlineColor"
+            BarStroke.Transparency = Warm and 0.4 or 0
         end
 
         function Slider:Display()
@@ -7842,7 +7885,7 @@ do
                     DisplayLabel.Text = string.format("%s%s%s", Slider.Prefix, Slider.Value, Slider.Suffix)
                 else
                     DisplayLabel.Text = string.format(
-                        "%s%s%s/%s%s%s",
+                        "%s%s%s / %s%s%s",
                         Slider.Prefix,
                         Slider.Value,
                         Slider.Suffix,
@@ -7853,8 +7896,16 @@ do
                 end
             end
 
-            local X = (Slider.Value - Slider.Min) / (Slider.Max - Slider.Min)
-            Fill.Size = UDim2.fromScale(X, 1)
+            local Span = Slider.Max - Slider.Min
+            local X = Span == 0 and 0 or (Slider.Value - Slider.Min) / Span
+
+            local FillSize = UDim2.fromScale(X, 1)
+
+            if Slider.Dragging then
+                Fill.Size = FillSize
+            else
+                TweenService:Create(Fill, SLIDER_FILL_TWEEN, { Size = FillSize }):Play()
+            end
         end
 
         function Slider:OnChanged(Func)
@@ -8051,6 +8102,7 @@ do
                 Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = false
             end
 
+            Slider.Dragging = true
             while IsDragInput(Input) and not Slider.Destroyed do
                 local Location = Mouse.X
                 local Scale = math.clamp((Location - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
@@ -8065,6 +8117,7 @@ do
 
                 RunService.RenderStepped:Wait()
             end
+            Slider.Dragging = false
 
             if Library.ActiveTab then
                 for _, Side in Library.ActiveTab.Sides do
@@ -8075,6 +8128,20 @@ do
             if Library.ActiveLoading and Library.ActiveLoading.Sidebar then
                 Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = true
             end
+        end))
+
+        --// Hovering warms the track edge, so the bar announces itself as
+        --// draggable before the click
+        local function SetHovered(Hovered: boolean)
+            Slider.Hovered = Hovered
+            Slider:UpdateColors()
+        end
+
+        table.insert(Slider.Connections, Bar.MouseEnter:Connect(function()
+            SetHovered(true)
+        end))
+        table.insert(Slider.Connections, Bar.MouseLeave:Connect(function()
+            SetHovered(false)
         end))
 
         if typeof(Slider.Tooltip) == "string" or typeof(Slider.DisabledTooltip) == "string" then
