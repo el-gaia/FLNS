@@ -7,7 +7,6 @@ end)
 
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
 
---// Fix is_____ functions for shitsploits, those functions should never error, only return a boolean. (why is this still a problem in the big 2026)
 local isfolder, isfile, listfiles = isfolder, isfile, listfiles
 local isfolder_copy, isfile_copy, listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
 local isfolder_success, isfolder_error = pcall(function() return isfolder_copy("test" .. tostring(math.random(1000000, 9999999))) end)
@@ -29,20 +28,21 @@ if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
     end
 end
 
---// WCAG21 constants (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance)
-local ContrastWarnThreshold = 4.5 --// Accessibility: minimum WCAG AA contrast ratio for normal text
-local SrgbLinearThreshold = 0.03928 --// sRGB channel value below which the linear conversion is a simple divide
-local SrgbLinearDivisor = 12.92 --// Divisor used for channel values below SrgbLinearThreshold
-local SrgbGammaOffset = 0.055 --// Offset applied before the gamma expansion power curve
-local SrgbGammaScale = 1.055 --// Scale applied before the gamma expansion power curve
-local SrgbGammaExponent = 2.4 --// Exponent for the gamma expansion power curve
+local ContrastWarnThreshold = 4.5
+local SrgbLinearThreshold = 0.03928
+local SrgbLinearDivisor = 12.92
+local SrgbGammaOffset = 0.055
+local SrgbGammaScale = 1.055
+local SrgbGammaExponent = 2.4
 local LuminanceRedWeight,
       LuminanceGreenWeight,
-      LuminanceBlueWeight = 0.2126, 0.7152, 0.0722 --// R, G, B channel weights in the relative luminance formula
-local ContrastRatioOffset = 0.05 --// Offset added to both luminances when computing a contrast ratio
+      LuminanceBlueWeight = 0.2126, 0.7152, 0.0722 
+local ContrastRatioOffset = 0.05 
 
 --// Theme Manager
 local SchemeIndexes = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
+
+local AllSchemeIndexes = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor", "WindowOutlineColor" }
 
 local ThemeManager = {
     Library = nil,
@@ -59,75 +59,75 @@ local ThemeManager = {
     BuiltInThemes = {
         ["Default"] = {
             1,
-            { FontColor = "ffffff", MainColor = "191919", AccentColor = "7d55ff", BackgroundColor = "0f0f0f", OutlineColor = "282828", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "191919", AccentColor = "7d55ff", BackgroundColor = "0f0f0f", OutlineColor = "282828", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["BBot"] = {
             2,
-            { FontColor = "ffffff", MainColor = "1e1e1e", AccentColor = "7e48a3", BackgroundColor = "232323", OutlineColor = "141414", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "1e1e1e", AccentColor = "7e48a3", BackgroundColor = "232323", OutlineColor = "141414", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Fatality"] = {
             3,
-            { FontColor = "ffffff", MainColor = "1e1842", AccentColor = "c50754", BackgroundColor = "191335", OutlineColor = "3c355d", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "1e1842", AccentColor = "c50754", BackgroundColor = "191335", OutlineColor = "3c355d", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Jester"] = {
             4,
-            { FontColor = "ffffff", MainColor = "242424", AccentColor = "db4467", BackgroundColor = "1c1c1c", OutlineColor = "373737", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "242424", AccentColor = "db4467", BackgroundColor = "1c1c1c", OutlineColor = "373737", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Mint"] = {
             5,
-            { FontColor = "ffffff", MainColor = "242424", AccentColor = "3db488", BackgroundColor = "1c1c1c", OutlineColor = "373737", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "242424", AccentColor = "3db488", BackgroundColor = "1c1c1c", OutlineColor = "373737", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Tokyo Night"] = {
             6,
-            { FontColor = "ffffff", MainColor = "191925", AccentColor = "6759b3", BackgroundColor = "16161f", OutlineColor = "323232", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "191925", AccentColor = "6759b3", BackgroundColor = "16161f", OutlineColor = "323232", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Ubuntu"] = {
             7,
-            { FontColor = "ffffff", MainColor = "3e3e3e", AccentColor = "e2581e", BackgroundColor = "323232", OutlineColor = "191919", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "3e3e3e", AccentColor = "e2581e", BackgroundColor = "323232", OutlineColor = "191919", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Quartz"] = {
             8,
-            { FontColor = "ffffff", MainColor = "232330", AccentColor = "426e87", BackgroundColor = "1d1b26", OutlineColor = "27232f", BackgroundImage = "" },
+            { FontColor = "ffffff", MainColor = "232330", AccentColor = "426e87", BackgroundColor = "1d1b26", OutlineColor = "27232f", WindowOutlineColor = "ffffff", BackgroundImage = "" },
         },
         ["Nord"] = {
             9,
-            { FontColor = "eceff4", MainColor = "3b4252", AccentColor = "88c0d0", BackgroundColor = "2e3440", OutlineColor = "4c566a", BackgroundImage = "" },
+            { FontColor = "eceff4", MainColor = "3b4252", AccentColor = "88c0d0", BackgroundColor = "2e3440", OutlineColor = "4c566a", WindowOutlineColor = "eceff4", BackgroundImage = "" },
         },
         ["Dracula"] = {
             10,
-            { FontColor = "f8f8f2", MainColor = "44475a", AccentColor = "ff79c6", BackgroundColor = "282a36", OutlineColor = "6272a4", BackgroundImage = "" },
+            { FontColor = "f8f8f2", MainColor = "44475a", AccentColor = "ff79c6", BackgroundColor = "282a36", OutlineColor = "6272a4", WindowOutlineColor = "f8f8f2", BackgroundImage = "" },
         },
         ["Monokai"] = {
             11,
-            { FontColor = "f8f8f2", MainColor = "272822", AccentColor = "f92672", BackgroundColor = "1e1f1c", OutlineColor = "49483e", BackgroundImage = "" },
+            { FontColor = "f8f8f2", MainColor = "272822", AccentColor = "f92672", BackgroundColor = "1e1f1c", OutlineColor = "49483e", WindowOutlineColor = "f8f8f2", BackgroundImage = "" },
         },
         ["Gruvbox"] = {
             12,
-            { FontColor = "ebdbb2", MainColor = "3c3836", AccentColor = "fb4934", BackgroundColor = "282828", OutlineColor = "504945", BackgroundImage = "" },
+            { FontColor = "ebdbb2", MainColor = "3c3836", AccentColor = "fb4934", BackgroundColor = "282828", OutlineColor = "504945", WindowOutlineColor = "ebdbb2", BackgroundImage = "" },
         },
         ["Solarized"] = {
             13,
-            { FontColor = "839496", MainColor = "073642", AccentColor = "cb4b16", BackgroundColor = "002b36", OutlineColor = "586e75", BackgroundImage = "" },
+            { FontColor = "839496", MainColor = "073642", AccentColor = "cb4b16", BackgroundColor = "002b36", OutlineColor = "586e75", WindowOutlineColor = "93a1a1", BackgroundImage = "" },
         },
         ["Catppuccin"] = {
             14,
-            { FontColor = "d9e0ee", MainColor = "302d41", AccentColor = "f5c2e7", BackgroundColor = "1e1e2e", OutlineColor = "575268", BackgroundImage = "" },
+            { FontColor = "d9e0ee", MainColor = "302d41", AccentColor = "f5c2e7", BackgroundColor = "1e1e2e", OutlineColor = "575268", WindowOutlineColor = "d9e0ee", BackgroundImage = "" },
         },
         ["One Dark"] = {
             15,
-            { FontColor = "abb2bf", MainColor = "282c34", AccentColor = "c678dd", BackgroundColor = "21252b", OutlineColor = "5c6370", BackgroundImage = "" },
+            { FontColor = "abb2bf", MainColor = "282c34", AccentColor = "c678dd", BackgroundColor = "21252b", OutlineColor = "5c6370", WindowOutlineColor = "abb2bf", BackgroundImage = "" },
         },
         ["Cyberpunk"] = {
             16,
-            { FontColor = "f9f9f9", MainColor = "262335", AccentColor = "00ff9f", BackgroundColor = "1a1a2e", OutlineColor = "413c5e", BackgroundImage = "" },
+            { FontColor = "f9f9f9", MainColor = "262335", AccentColor = "00ff9f", BackgroundColor = "1a1a2e", OutlineColor = "413c5e", WindowOutlineColor = "00ff9f", BackgroundImage = "" },
         },
         ["Oceanic Next"] = {
             17,
-            { FontColor = "d8dee9", MainColor = "1b2b34", AccentColor = "6699cc", BackgroundColor = "16232a", OutlineColor = "343d46", BackgroundImage = "" },
+            { FontColor = "d8dee9", MainColor = "1b2b34", AccentColor = "6699cc", BackgroundColor = "16232a", OutlineColor = "343d46", WindowOutlineColor = "d8dee9", BackgroundImage = "" },
         },
         ["Material"] = {
             18,
-            { FontColor = "eeffff", MainColor = "212121", AccentColor = "82aaff", BackgroundColor = "151515", OutlineColor = "424242", BackgroundImage = "" },
+            { FontColor = "eeffff", MainColor = "212121", AccentColor = "82aaff", BackgroundColor = "151515", OutlineColor = "424242", WindowOutlineColor = "82aaff", BackgroundImage = "" },
         }
     }
 }
@@ -185,7 +185,7 @@ local function IsValidThemeData(Data: any): boolean
         return false
     end
 
-    --// Require the color scheme to be present; font/background image are optional and fall back to current values
+    
     for _, SchemeIndex in SchemeIndexes do
         if typeof(Data[SchemeIndex]) ~= "string" then
             return false
@@ -197,15 +197,15 @@ end
 
 --// Folder helper \\--
 local function SplitPath(Path: string): {string}
-	local Result = {}
-	local Current = ""
+    local Result = {}
+    local Current = ""
 
-	for Part in string.gmatch(Path, "[^/]+") do
-		Current = if Current == "" then Part else (Current .. "/" .. Part)
-		table.insert(Result, Current)
-	end
+    for Part in string.gmatch(Path, "[^/]+") do
+        Current = if Current == "" then Part else (Current .. "/" .. Part)
+        table.insert(Result, Current)
+    end
 
-	return Result
+    return Result
 end
 
 local function GetFolderPath(): false | string
@@ -224,8 +224,9 @@ local function GetThemePath(ThemeName: string): false | string
     return if CurrentThemesPath == false then false else string.format("%s/%s.json", CurrentThemesPath, ThemeName)
 end
 
-local function DoesThemeExist(ThemeName: string, IncludeBuiltIn: boolean): boolean
-    if ThemeManager.BuiltInThemes[ThemeName] then
+local function DoesThemeExist(ThemeName: string, IncludeBuiltIn: boolean?): boolean
+    
+    if IncludeBuiltIn ~= false and ThemeManager.BuiltInThemes[ThemeName] then
         return true
     end
 
@@ -335,8 +336,10 @@ local function BuildCurrentThemeData(): {[string]: any}
         BackgroundImage = Library.Options.BackgroundImage.Value
     }
 
-    for _, SchemeIndex in SchemeIndexes do
-        ThemeData[SchemeIndex] = Library.Options[SchemeIndex].Value:ToHex()
+    for _, SchemeIndex in AllSchemeIndexes do
+        local Option = Library.Options[SchemeIndex]
+        if not Option then continue end
+        ThemeData[SchemeIndex] = Option.Value:ToHex()
     end
 
     return ThemeData
@@ -358,7 +361,7 @@ function ThemeManager:SaveCustomTheme(ThemeName: string): any
 
     ThemeManager:CheckFolderTree()
 
-    --// Custom theme files use the same flat shape as an exported theme JSON, so reuse the encoder
+   
     local EncodedData, SuccessEncode, EncodeErrorMessage = ThemeManager:SaveJSON()
     if not SuccessEncode then
         return false, EncodeErrorMessage
@@ -394,7 +397,6 @@ function ThemeManager:Delete(ThemeName: string): (boolean | string?)
     return true
 end
 
---// Default Theme \\--
 function ThemeManager:GetDefaultTheme(): (string, boolean, string?)
     ThemeManager:CheckFolderTree()
 
@@ -431,7 +433,7 @@ function ThemeManager:SetDefaultTheme(Theme: any)
     local LibraryScheme = {}
     local FinalTheme = {}
 
-    for _, SchemeIndex in SchemeIndexes do
+    for _, SchemeIndex in AllSchemeIndexes do
         local IndexData = Theme[SchemeIndex]
         local IndexType = typeof(IndexData)
         
@@ -629,7 +631,8 @@ end
 function ThemeManager:ThemeUpdate()
     local Library = ThemeManager.Library
 
-    for _, SchemeIndex in SchemeIndexes do
+    --// Use AllSchemeIndexes so optional scheme colors (e.g. WindowOutlineColor) are also synced to Library.Scheme.
+    for _, SchemeIndex in AllSchemeIndexes do
         local Element = Library.Options[SchemeIndex]
         if not Element then continue end
 
@@ -665,7 +668,7 @@ function ThemeManager:ApplyThemeData(ThemeData: any): (boolean, string?)
             if typeof(Value) ~= "string" then continue end
             ThemeManager.Library:SetBackgroundImage(Value)
 
-        elseif table.find(SchemeIndexes, Index) then
+        elseif table.find(AllSchemeIndexes, Index) then
             local SuccessColor, Color = pcall(Color3.fromHex, Value)
             if not SuccessColor then continue end
 
@@ -710,7 +713,8 @@ function ThemeManager:SaveJSON(): (string, boolean, string?)
         return "", false, "Failed to encode data"
     end
 
-    return EncodedData, true
+    --// Make SaveJSON's success path return a consistent 3-tuple (string, boolean, string?) so callers don't have to handle two shapes.
+    return EncodedData, true, nil
 end
 
 function ThemeManager:LoadJSON(Content: string): (boolean, string?)
@@ -808,7 +812,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     local MainColor = CreateColorOption("Main color", "MainColor")
     local AccentColor = CreateColorOption("Accent color", "AccentColor")
     local OutlineColor = CreateColorOption("Outline color", "OutlineColor")
-	local WindowOutlineColor = CreateColorOption("Window Outline Color", "WindowOutlineColor")										
+    local WindowOutlineColor = CreateColorOption("Window outline color", "WindowOutlineColor")
     local FontColor = CreateColorOption("Font color", "FontColor")
 
     --// Accessibility: live contrast readout for the colors above
@@ -1064,7 +1068,10 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         )
     end)
 
-    DefaultThemeLabel = Themesbox:AddLabel("Current default theme: ...", true);
+    DefaultThemeLabel = Themesbox:AddLabel({
+        Text = "Current default theme: ...",
+        DoesWrap = true,
+    })
 
     Themesbox:AddDivider()
 
@@ -1123,7 +1130,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
         ThemeManager.Library.Options.ThemeManager_ThemeList,
         ThemeManager.Library.Options.FontFace,
         ThemeManager.Library.Options.BackgroundImage,
-        ThemeManager.Library.Options.ThemeManager_ThemeJSON;
+        ThemeManager.Library.Options.ThemeManager_ThemeJSON
 
     --// Handlers
     ThemeList:OnChanged(function()
@@ -1138,7 +1145,7 @@ function ThemeManager:CreateThemeManager(Themesbox: any)
     MainColor:OnChanged(UpdateTheme)
     AccentColor:OnChanged(UpdateTheme)
     OutlineColor:OnChanged(UpdateTheme)
-	WindowOutlineColor:OnChanged(UpdateTheme)										
+    WindowOutlineColor:OnChanged(UpdateTheme)
     FontColor:OnChanged(UpdateTheme)
     FontFace:OnChanged(function(Value) ThemeManager.Library:SetFont(Enum.Font[Value]) end)
     BackgroundImage:OnChanged(function(Value) ThemeManager.Library:SetBackgroundImage(Value) end)
